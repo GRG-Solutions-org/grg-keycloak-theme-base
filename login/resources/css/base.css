@@ -421,16 +421,26 @@ body,
  * que se podria asumir) estos dos NO comparten contenedor --
  * "Olvidaste tu contraseña" es el helper-text del campo contraseña, y
  * "Recordar sesion" es un .pf-v5-c-form__group HERMANO, separado, mas
- * abajo. Se alinean con position:absolute usando una posicion MEDIDA
- * con Playwright (no calculada a mano -- el form de keycloak.v2 tiene
- * su propio "gap" entre grupos ademas del margin-bottom de cada uno,
- * un calculo a mano fallaba por ese motivo). El boton de abajo sube a
- * ocupar el espacio libre (ventaja extra: menos altura total).
+ * abajo.
+ *
+ * FIX 2026-11-11 (bug real reportado por Guille en LegalCore): la
+ * primera version alineaba el checkbox con position:absolute medido
+ * desde el TOP DEL FORMULARIO COMPLETO (ej. top:128px). Eso se rompia
+ * cuando el campo de usuario crece por un mensaje de error de
+ * credenciales ("Usuario o contraseña incorrectos" agrega su propio
+ * .pf-v5-c-form__helper-text ahi) -- el campo de contraseña bajaba
+ * para darle espacio, pero el checkbox se quedaba fijo en su posicion
+ * vieja (quedaba "flotando" mas arriba de donde deberia).
+ *
+ * Fix real: en vez de medir desde el formulario completo (afectado
+ * por el usuario), se usa margin-top NEGATIVO medido SOLO desde la
+ * altura propia del grupo de contraseña (input + su helper-text de
+ * "Olvidaste tu contraseña") -- esa altura NO cambia nunca por errores
+ * en el campo de usuario, asi que el checkbox queda bien alineado sin
+ * importar que pase arriba. Valor medido con Playwright: el checkbox
+ * cae naturalmente 104px despues del inicio del grupo de contraseña;
+ * el helper-text objetivo esta a 52px -- margin-top: -52px.
  */
-#kc-form-login {
-  position: relative;
-}
-
 .pf-v5-c-login__container:has(#kc-form-login) .pf-v5-c-form__helper-text {
   margin: 8px 0 0 !important;
 }
@@ -449,10 +459,7 @@ body,
 }
 
 .pf-v5-c-login__container:has(#kc-form-login) .pf-v5-c-form__group:has(.pf-v5-c-check) {
-  position: absolute;
-  top: 128px; /* medido con Playwright contra Caja Chancay: 44(usuario)+gap+44(password)+8 de aire -- si cambian las alturas de arriba, volver a medir, no recalcular a ojo */
-  left: 0;
-  margin: 0 !important;
+  margin: -52px 0 0 !important;
   height: 20px;
   display: flex;
   align-items: center;
