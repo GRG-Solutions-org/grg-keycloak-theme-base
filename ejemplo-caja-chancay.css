@@ -1,0 +1,25 @@
+/*
+ * Ejemplo real de override.css -- esto es literalmente lo que Caja
+ * Chancay necesitaria en su propio
+ * infra/keycloak/themes/caja-chancay/login/resources/css/override.css
+ * una vez migrado a heredar de grg-login-base, en vez de tener todo
+ * el CSS estructural copiado (que es lo que tiene HOY, 2026-11-11,
+ * porque se construyo antes de que existiera este tema compartido).
+ */
+
+:root {
+  --grg-primary: #102B50;
+  --grg-primary-hover: #2563EB;
+  --grg-text: #263445;
+  --grg-text-muted: #6b7a90;
+  --grg-placeholder: #9aa5b5;
+  --grg-border: #e3e8f0;
+}
+
+.pf-v5-c-login__container:has(#kc-form-login) #kc-page-title::before {
+  content: "caja chancay";
+}
+
+#kc-header::after {
+  content: "Innovación financiera\A para un mejor futuro";
+}

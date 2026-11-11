@@ -1,0 +1,517 @@
+/*
+ * Tema base de login -- GRG Solutions. Estructura compartida por todo
+ * producto SaaS (Quarkus + Keycloak): Caja Chancay, Mission Control
+ * (tras su migracion), LegalCore, y los que vengan.
+ *
+ * Como lo usa cada app:
+ *   1. Su theme.properties: "parent=grg-login-base" + su propio
+ *      "styles=css/base.css css/override.css" (el base.css se resuelve
+ *      heredado de aca, Keycloak lo sirve bajo el nombre de la app).
+ *   2. Provee sus propios archivos en login/resources/img/:
+ *        logo-icon.jpg  -- icono cuadrado, SOLO el icono (sin texto ni
+ *                          espacio en blanco alrededor -- si el logo
+ *                          original trae wordmark pegado, hay que
+ *                          recortarlo primero, si no se ve borroso).
+ *        hero.jpg        -- foto para el panel izquierdo (desktop).
+ *   3. Su propio css/override.css redefine las variables de abajo y
+ *      los dos textos especificos de marca (wordmark + tagline).
+ *   4. Su propio messages_es.properties puede personalizar los textos
+ *      de error si quiere (si no, hereda los genericos de aca).
+ *
+ * Keycloak 26 (parent=keycloak.v2) usa PatternFly 5; se sobreescriben
+ * clases .pf-v5-c-* ademas de selectores clasicos (#kc-*) para cubrir
+ * variaciones de version sin depender de una sola.
+ */
+
+:root {
+  --grg-primary: #102B50;
+  --grg-primary-hover: #2563EB;
+  --grg-text: #263445;
+  --grg-text-muted: #6b7a90;
+  --grg-placeholder: #9aa5b5;
+  --grg-border: #e3e8f0;
+}
+
+/*
+ * Fondo de pagina: la foto a todo lo ancho/alto, SIN recuadro (pedido
+ * explicito de Guille en Caja Chancay: "el fondo deberia ser todo no
+ * un card de izquierda"). El degradado va encima para que el texto y
+ * la tarjeta blanca mantengan contraste en cualquier resolucion.
+ *
+ * NOTA: sin "fixed" -- con fixed, el fondo queda anclado al viewport
+ * mientras el texto (que SI esta en el flujo normal) se mueve con el
+ * scroll, desincronizandose uno del otro (bug real encontrado en Caja
+ * Chancay 2026-11-10).
+ */
+body,
+.pf-v5-c-login,
+.login-pf body {
+  background:
+    linear-gradient(135deg, rgba(16, 43, 80, 0.45) 0%, rgba(10, 30, 58, 0.75) 100%),
+    url('../img/hero.jpg') left center / cover no-repeat !important;
+  font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+}
+
+.pf-v5-c-login {
+  display: flex !important;
+  align-items: center !important;
+  min-height: 100vh !important;
+}
+
+/* Mobile: sin foto, fondo solido simple -- prioriza el formulario,
+   evita que la imagen compita en pantallas chicas. */
+@media (max-width: 1199px) {
+  body,
+  .pf-v5-c-login,
+  .login-pf body {
+    background: linear-gradient(135deg, var(--grg-primary) 0%, #0A1E3A 100%) !important;
+  }
+}
+
+/*
+ * Layout split-screen (escritorio, >=1200px): PatternFly ya arma un
+ * grid de 2 columnas para el login (grid-template-areas: "main header"),
+ * pensado para un panel lateral de marca junto a la tarjeta -- solo
+ * invertimos el orden (panel de marca a la izquierda) y lo usamos
+ * como hero en vez de dejarlo vacio con el logo suelto (bug real
+ * encontrado en Caja Chancay: sin esto, el logo del header queda
+ * flotando fuera de la tarjeta a partir de 1200px).
+ * Sin esto, <1200px cae a una sola columna apilada -- no hace falta
+ * nada mas para mobile/tablet.
+ */
+@media (min-width: 1200px) {
+  .pf-v5-c-login__container {
+    max-width: 1100px !important;
+    grid-template-areas: "header main" !important;
+    grid-template-columns: 1.3fr 1fr !important;
+  }
+}
+
+/*
+ * El panel izquierdo no tiene su propia caja -- la foto es el fondo de
+ * pagina (ver arriba), a todo lo ancho. Esta celda del grid queda
+ * transparente, solo sirve de contenedor para el texto institucional
+ * (tagline, parametrizado por cada app en su override.css) sobre la
+ * foto. Oculto en mobile -- prioriza el formulario.
+ */
+#kc-header {
+  display: none;
+}
+
+@media (min-width: 1200px) {
+  #kc-header {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 0 0 48px 16px !important;
+  }
+}
+
+/* Tagline: CADA APP define su propio texto en override.css
+   sobreescribiendo este mismo selector (content). Este es solo un
+   fallback generico por si una app se olvida de parametrizarlo. */
+#kc-header::after {
+  content: "Plataforma GRG Solutions";
+  white-space: pre-line;
+  position: relative;
+  z-index: 1;
+  color: #ffffff;
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.3;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+}
+
+/* La foto ya muestra el logo y el nombre -- el texto del realm
+   (#kc-header-wrapper) se mantiene accesible para lectores de
+   pantalla pero oculto visualmente, para no duplicarlo. */
+#kc-header-wrapper {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+/*
+ * Tarjeta del formulario -- UNA sola caja blanca (.pf-v5-c-login__main-body).
+ * #kc-form-login/.card-pf NO deben tener su propio fondo+radio+sombra,
+ * o se genera una caja blanca ANIDADA dentro de la caja exterior --
+ * eso crea un quiebre visual "en punta" (bug real encontrado y
+ * reportado por Guille en Caja Chancay, 2026-11-10).
+ */
+.pf-v5-c-login__main-body,
+.pf-v5-c-card {
+  background: #ffffff !important;
+  border-radius: 16px !important;
+  box-shadow: 0 8px 24px rgba(16, 43, 80, 0.25) !important;
+  padding: 20px 24px !important;
+}
+
+#kc-form-login,
+.card-pf {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/*
+ * Logo + wordmark + subtitulo arriba del titulo -- solo en el login
+ * (error.ftl/info.ftl comparten el mismo .pf-v5-c-login__main-header
+ * pero no tienen sentido con este texto), por eso se usa
+ * :has(#kc-form-login) para acotarlo.
+ */
+.pf-v5-c-login__container:has(#kc-form-login) .pf-v5-c-login__main-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 6px !important;
+}
+
+/* Icono: cada app provee su propio login/resources/img/logo-icon.jpg
+   (SOLO el icono, recortado -- ver nota al inicio del archivo). */
+.pf-v5-c-login__container:has(#kc-form-login) .pf-v5-c-login__main-header::before {
+  content: "";
+  display: block;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 6px;
+  background-image: url('../img/logo-icon.jpg');
+  background-size: cover;
+  background-position: center;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(16, 43, 80, 0.25);
+}
+
+#kc-page-title {
+  color: var(--grg-primary) !important;
+  font-weight: 700 !important;
+  font-size: 20px !important;
+  margin: 0 !important;
+}
+
+/* Wordmark (nombre de la app chico, arriba del titulo): CADA APP
+   sobreescribe este "content" en su override.css. Fallback generico
+   abajo por si se olvidan. */
+.pf-v5-c-login__container:has(#kc-form-login) #kc-page-title::before {
+  content: "GRG Solutions";
+  display: block;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: #43536b;
+  margin-bottom: 2px;
+}
+
+.pf-v5-c-login__container:has(#kc-form-login) .pf-v5-c-login__main-header::after {
+  content: "Accede a tu cuenta para continuar";
+  display: block;
+  margin-top: 4px;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--grg-text-muted);
+}
+
+/*
+ * Footer "Desarrollado por GRG Solutions" -- FIJO, ninguna app lo
+ * toca (regla de Guille, 2026-11-10). Es un <a> real insertado por JS
+ * (placeholder-labels.js), no un ::after de CSS, porque un
+ * pseudo-elemento con "content" de texto no puede llevar href.
+ */
+.kc-footer-credit {
+  display: block;
+  text-align: center;
+  margin-top: 10px;
+  font-size: 11px;
+  color: var(--grg-placeholder) !important;
+  text-decoration: none;
+}
+
+.kc-footer-credit:hover {
+  color: var(--grg-primary-hover) !important;
+  text-decoration: underline;
+}
+
+/* Boton principal (Ingresar). La flecha va en el propio texto del
+   boton (messages_es.properties: doLogIn) porque <input type="submit">
+   NO soporta ::before/::after en NINGUN navegador (es un elemento
+   reemplazado) -- un ::after aca nunca se renderizaria. */
+#kc-form-buttons input[type="submit"],
+.btn-primary,
+.pf-v5-c-button.pf-m-primary {
+  background-color: var(--grg-primary) !important;
+  border-color: var(--grg-primary) !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  border-radius: 8px !important;
+  min-height: 48px;
+}
+
+#kc-form-buttons input[type="submit"]:hover,
+.btn-primary:hover,
+.pf-v5-c-button.pf-m-primary:hover {
+  background-color: var(--grg-primary-hover) !important;
+  border-color: var(--grg-primary-hover) !important;
+}
+
+/*
+ * Login con Google (pedido explicito de Guille, 2026-11-11: "todo
+ * login debe permitir loguearse con correo gmail"). Keycloak dibuja
+ * esto solo si el realm tiene un Identity Provider configurado (ver
+ * scripts/setup-google-idp.sh) -- sin eso, esta seccion no existe en
+ * el HTML y este CSS no hace nada (no rompe nada tampoco).
+ *
+ * AVISO: el markup exacto de %kc-social-providers% en keycloak.v2 NO
+ * esta verificado en vivo todavia (no se probo contra un Identity
+ * Provider real) -- a diferencia del resto de este archivo, que SI
+ * esta probado pixel a pixel contra Caja Chancay. Revisar/ajustar la
+ * primera vez que se configure Google de verdad en cualquier app.
+ */
+#kc-social-providers {
+  margin-top: 12px;
+}
+
+#kc-social-providers ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.pf-v5-c-login__container:has(#kc-form-login) #kc-social-providers .pf-v5-c-button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #ffffff !important;
+  color: var(--grg-text) !important;
+  border: 1px solid var(--grg-border) !important;
+  border-radius: 8px !important;
+  min-height: 44px;
+  font-weight: 600;
+}
+
+.pf-v5-c-login__container:has(#kc-form-login) #kc-social-providers .pf-v5-c-button:hover {
+  background: #f8fafc !important;
+}
+
+/* Divisor "o" entre el boton de Ingresar y el de Google -- solo tiene
+   sentido si hay social providers configurados. */
+#kc-form-buttons {
+  position: relative;
+}
+
+.pf-v5-c-login__container:has(#kc-social-providers) #kc-form-buttons::after {
+  content: "o";
+  display: block;
+  text-align: center;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--grg-border);
+  color: var(--grg-placeholder);
+  font-size: 12px;
+}
+
+/*
+ * Iconos de usuario/contraseña como pseudo-elemento sobre el span
+ * .pf-v5-c-form-control (no directo en el <input>): el autocompletado
+ * de Chrome pinta un fondo solido encima del input via box-shadow y
+ * tapa cualquier background-image puesto ahi -- en el span-contenedor
+ * sobrevive porque esta en otra capa, por encima (z-index).
+ */
+.pf-v5-c-form-control:has(#username),
+.pf-v5-c-form-control:has(#password) {
+  position: relative;
+}
+
+.pf-v5-c-form-control:has(#username)::before,
+.pf-v5-c-form-control:has(#password)::before {
+  content: "";
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  background-repeat: no-repeat;
+  background-size: contain;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.pf-v5-c-form-control:has(#username)::before {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23102B50'><path d='M12 12c2.7 0 8 1.34 8 4v2H4v-2c0-2.66 5.3-4 8-4zm0-2a4 4 0 1 0 0-8 4 4 0 0 0 0 8z'/></svg>");
+}
+
+.pf-v5-c-form-control:has(#password)::before {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23102B50'><path d='M6 10V8a6 6 0 1 1 12 0v2h1a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1h1zm2 0h8V8a4 4 0 1 0-8 0v2z'/></svg>");
+}
+
+#username,
+#password {
+  padding-left: 40px !important;
+}
+
+/* Radio y altura uniforme de campos. */
+.pf-v5-c-form-control {
+  border-radius: 10px !important;
+  min-height: 44px;
+}
+
+.pf-v5-c-login__container:has(#kc-form-login) .pf-v5-c-form__group {
+  position: relative;
+  margin-bottom: 8px;
+}
+
+/*
+ * Labels como placeholder, DENTRO de la caja de texto -- se mantienen
+ * como <label> reales (accesibles), solo se reposicionan encima del
+ * input con position:absolute. Un pequeño JS (placeholder-labels.js)
+ * agrega la clase "kc-has-value" cuando el campo tiene contenido, para
+ * que no se superponga con lo escrito (ver :focus-within para el caso
+ * "mientras se escribe", y :-webkit-autofill para el autocompletado
+ * de Chrome que no dispara eventos de input).
+ *
+ * OJO: en el HTML real de keycloak.v2 hay DOS elementos con la clase
+ * "pf-v5-c-form__label" anidados -- un <div> que envuelve al <label>
+ * real. Un selector ".pf-v5-c-form__label" sin mas los afecta a
+ * AMBOS, duplicando el position:absolute/top y corriendo el texto
+ * hacia abajo (bug real reportado por Guille en Caja Chancay,
+ * reproducido en Chrome y Edge, confirmado midiendo con Playwright).
+ * Por eso aca se usa "label.pf-v5-c-form__label" -- esa combinacion
+ * de selector de ELEMENTO + clase solo matchea el <label>, nunca el
+ * <div>.
+ */
+.pf-v5-c-login__container:has(#kc-form-login) label.pf-v5-c-form__label {
+  /*
+   * "top: 22px" fijo en vez de "top: 50%": el grupo de contraseña
+   * mide mas que el de usuario porque incluye la fila de "Olvidaste
+   * tu contraseña" debajo -- centrar al 50% del grupo completo
+   * empujaba el label hacia abajo, fuera del centro real del input.
+   * 22px = mitad de los 44px del campo (fijo, no del grupo).
+   */
+  position: absolute;
+  top: 22px;
+  left: 40px;
+  transform: translateY(-50%);
+  margin: 0 !important;
+  pointer-events: none;
+  transition: opacity 0.1s ease;
+  z-index: 3;
+}
+
+.pf-v5-c-login__container:has(#kc-form-login) .pf-v5-c-form__label-text {
+  font-size: 14px !important;
+  font-weight: 400 !important;
+  color: var(--grg-placeholder) !important;
+  text-transform: none !important;
+}
+
+.pf-v5-c-login__container:has(#kc-form-login) .pf-v5-c-form__group.kc-has-value label.pf-v5-c-form__label,
+.pf-v5-c-login__container:has(#kc-form-login) .pf-v5-c-form__group:focus-within label.pf-v5-c-form__label,
+.pf-v5-c-login__container:has(#kc-form-login) .pf-v5-c-form__group:has(input:-webkit-autofill) label.pf-v5-c-form__label {
+  opacity: 0;
+}
+
+/*
+ * Fila "Recordar sesion" + "Olvidaste tu contraseña" en una sola
+ * linea. En el login.ftl REAL de keycloak.v2 (no en el login.ftl base
+ * que se podria asumir) estos dos NO comparten contenedor --
+ * "Olvidaste tu contraseña" es el helper-text del campo contraseña, y
+ * "Recordar sesion" es un .pf-v5-c-form__group HERMANO, separado, mas
+ * abajo. Se alinean con position:absolute usando una posicion MEDIDA
+ * con Playwright (no calculada a mano -- el form de keycloak.v2 tiene
+ * su propio "gap" entre grupos ademas del margin-bottom de cada uno,
+ * un calculo a mano fallaba por ese motivo). El boton de abajo sube a
+ * ocupar el espacio libre (ventaja extra: menos altura total).
+ */
+#kc-form-login {
+  position: relative;
+}
+
+.pf-v5-c-login__container:has(#kc-form-login) .pf-v5-c-form__helper-text {
+  margin: 8px 0 0 !important;
+}
+
+.pf-v5-c-login__container:has(#kc-form-login) .pf-v5-c-helper-text {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  height: 20px;
+}
+
+.pf-v5-c-login__container:has(#kc-form-login) .pf-v5-c-helper-text__item-text,
+.pf-v5-c-login__container:has(#kc-form-login) .pf-v5-c-helper-text a {
+  font-size: 12px !important;
+  line-height: 20px;
+}
+
+.pf-v5-c-login__container:has(#kc-form-login) .pf-v5-c-form__group:has(.pf-v5-c-check) {
+  position: absolute;
+  top: 128px; /* medido con Playwright contra Caja Chancay: 44(usuario)+gap+44(password)+8 de aire -- si cambian las alturas de arriba, volver a medir, no recalcular a ojo */
+  left: 0;
+  margin: 0 !important;
+  height: 20px;
+  display: flex;
+  align-items: center;
+}
+
+.pf-v5-c-login__container:has(#kc-form-login) .pf-v5-c-form__group:has(.pf-v5-c-form__actions) {
+  margin-top: 12px;
+}
+
+/* El checkbox no tiene icono como Usuario/Contraseña, pero el TEXTO
+   debe arrancar en la misma columna (40px) para que las tres lineas
+   esten alineadas: 12px de margen (igual que el icono) + ~18px de
+   caja + 10px de separacion = 40px, igual que el padding-left de los
+   inputs. */
+.pf-v5-c-login__container:has(#kc-form-login) .pf-v5-c-check {
+  display: flex;
+  align-items: center;
+  line-height: 20px;
+}
+
+.pf-v5-c-login__container:has(#kc-form-login) .pf-v5-c-check__input {
+  margin: 0 10px 0 12px;
+}
+
+.pf-v5-c-check__label {
+  color: var(--grg-text) !important;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 20px;
+}
+
+/* Enlaces (recuperar contraseña, etc.) */
+a,
+a:visited {
+  color: var(--grg-primary-hover) !important;
+}
+
+/*
+ * Pantallas de error/info (error.ftl, info.ftl) comparten el mismo
+ * template.ftl que el login, pero NO envuelven su contenido en una
+ * tarjeta -- el unico contenedor disponible ahi es
+ * .pf-v5-c-login__main-body (ya estilizado arriba), asi que no se ve
+ * "pelada" frente al login.
+ */
+#kc-error-message .instruction {
+  color: var(--grg-text) !important;
+}
+
+#kc-error-message #backToApplication {
+  display: inline-block;
+  margin-top: 16px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  background-color: var(--grg-primary) !important;
+  color: #ffffff !important;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+#kc-error-message #backToApplication:hover {
+  background-color: var(--grg-primary-hover) !important;
+}
